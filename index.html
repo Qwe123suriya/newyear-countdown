@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cinematic New Year</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=Prompt:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Outfit', 'Prompt', sans-serif;
+        }
+
+        /* --- Background System --- */
+        .sky-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .bg-day {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #38bdf8 0%, #bae6fd 50%, #fef3c7 100%);
+            opacity: 1;
+            transition: opacity 6s ease-in-out;
+            z-index: 1;
+        }
+
+        .bg-night {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at bottom, #1e293b 0%, #020617 90%);
+            opacity: 0;
+            transition: opacity 6s ease-in-out;
+            z-index: 2;
+        }
+
+        .bg-peak {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at bottom, #3f2e18 0%, #000000 60%); 
+            opacity: 0;
+            transition: opacity 4s ease;
+            z-index: 3;
+        }
+
+        /* Sun Element */
+        .sun {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, #fcd34d 0%, rgba(253, 186, 116, 0.5) 60%, transparent 100%);
+            border-radius: 50%;
+            filter: blur(10px);
+            opacity: 0.8;
+            transition: bottom 6s ease-in-out, opacity 6s;
+            z-index: 1; 
+        }
+        
+        body.phase-night .sun, body.phase-newyear .sun {
+            bottom: -200px;
+            opacity: 0;
+        }
+
+        body.phase-day .bg-day { opacity: 1; }
+        body.phase-day .bg-night { opacity: 0; }
+        
+        body.phase-night .bg-day { opacity: 0; }
+        body.phase-night .bg-night { opacity: 1; }
+        
+        body.phase-newyear .bg-night { opacity: 0; }
+        body.phase-newyear .bg-peak { opacity: 1; }
+
+        /* Canvas สำหรับพลุ */
+        #firework-canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 4;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* --- Text Area --- */
+        .text-area {
+            position: relative;
+            height: 120px; 
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px; 
+        }
+
+        .text-item {
+            position: absolute;
+            opacity: 0;
+            transform: translateY(25px);
+            width: 100%;
+            text-align: center;
+            transition: opacity 3s ease-in-out, transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 4s ease;
+        }
+
+        .text-item.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .text-item.exit {
+            opacity: 0;
+            transform: translateY(-25px);
+        }
+
+        /* --- Countdown Area --- */
+        .countdown-container {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            opacity: 1;
+            transition: opacity 2s ease-in-out, transform 2s ease-in-out;
+        }
+        
+        .countdown-container.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .countdown-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .countdown-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 400; 
+            color: #334155;
+            line-height: 1;
+            transition: color 4s ease;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .countdown-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 3px; 
+            color: #64748b;
+            margin-top: 10px;
+            text-transform: uppercase;
+            font-weight: 500;
+            transition: color 4s ease;
+        }
+
+        body.phase-night .countdown-value, body.phase-newyear .countdown-value { color: #f8fafc; text-shadow: 0 0 20px rgba(255,255,255,0.1); }
+        body.phase-night .countdown-label, body.phase-newyear .countdown-label { color: #94a3b8; }
+        
+        /* --- Typography Styles --- */
+        .style-mood {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 6px; 
+            color: #cbd5e1;
+            text-transform: uppercase;
+            font-weight: 400;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            z-index: 50;
+            transition: all 1s ease;
+        }
+
+        body.phase-day .style-mood { color: #475569; text-shadow: none; }
+
+        body.phase-newyear .style-mood {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 
+                0 0 20px rgba(255, 255, 255, 0.8),
+                0 0 40px rgba(253, 224, 71, 0.3);
+            letter-spacing: 8px;
+        }
+
+        .style-hero {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800; 
+            font-size: clamp(6rem, 20vw, 12rem);
+            color: #fbbf24;
+            letter-spacing: -4px; 
+            background: linear-gradient(to bottom, #fcd34d 20%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.8)) drop-shadow(0 0 50px rgba(251, 191, 36, 0.5));
+            z-index: 20;
+        }
+
+        @media (max-width: 768px) {
+            .countdown-container { gap: 15px; }
+            .countdown-value { font-size: 2rem; }
+            .countdown-label { font-size: 0.6rem; letter-spacing: 1px; }
+        }
+        /* ==========================
+        REAL TIME CLOCK (BOTTOM RIGHT)
+        ========================== */
+    .real-time-clock {
+        position: fixed;
+        bottom: 20px;
+        right: 24px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        letter-spacing: 2px;
+        color: #64748b;
+        opacity: 0.8;
+        z-index: 100;
+        transition: color 3s ease, opacity 3s ease;
+    }
+
+    /* กลางคืน */
+    body.phase-night .real-time-clock {
+        color: #cbd5e1;
+        opacity: 0.9;
+    }
+
+/* ปีใหม่ */
+    body.phase-newyear .real-time-clock {
+        color: #ffffff;
+        opacity: 1;
+        text-shadow: 0 0 10px rgba(255,255,255,0.4);
+    }
+
+
+    </style>
+</head>
+<body class="phase-day"> 
+
+    <div class="sky-background">
+        <div class="bg-day">
+            <div class="sun"></div>
+        </div>
+        <div class="bg-night"></div>
+        <div class="bg-peak"></div>
+    </div>
+    
+    <canvas id="firework-canvas"></canvas>
+
+    <div class="ui-layer">
+        <div class="real-time-clock" id="realTimeClock">
+            00:00:00
+        </div>
+        <div class="text-area" id="textContainer"></div>
+        
+        <div class="countdown-container" id="countdownBox">
+            <div class="countdown-block">
+                <div class="countdown-value" id="val-d">00</div>
+                <div class="countdown-label">Days</div>
+            </div>
+            <div class="countdown-block">
+                <div class="countdown-value" id="val-h">00</div>
+                <div class="countdown-label">Hours</div>
+            </div>
+            <div class="countdown-block">
+                <div class="countdown-value" id="val-m">00</div>
+                <div class="countdown-label">Minutes</div>
+            </div>
+            <div class="countdown-block">
+                <div class="countdown-value" id="val-s">00</div>
+                <div class="countdown-label">Seconds</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+let isCelebrationStarted = false;
+let celebrationStartTime = 0; // จับเวลาเริ่มงาน
+
+(function() { 
+    const canvas = document.getElementById('firework-canvas');
+    const ctx = canvas.getContext('2d');
+    let cw = window.innerWidth;
+    let ch = window.innerHeight;
+    
+    // Arrays for physics objects
+    let fireworks = [];
+    let particles = [];
+    let stars = [];
+    let meteors = [];
+
+    let timerTotal = 50; 
+    let timerTick = 0;
+    
+    canvas.width = cw;
+    canvas.height = ch;
+
+    function random(min, max) { return Math.random() * (max - min) + min; }
+    function calculateDistance(p1x, p1y, p2x, p2y) { return Math.sqrt(Math.pow(p1x - p2x, 2) + Math.pow(p1y - p2y, 2)); }
+
+    // ==========================================
+    // BACKGROUND OBJECTS (Stars & Meteors)
+    // ==========================================
+    class Star {
+        constructor() {
+            this.x = Math.random() * cw;
+            this.y = Math.random() * ch;
+            this.size = Math.random() * 1.5;
+            this.baseAlpha = Math.random() * 0.8 + 0.1;
+            this.alpha = 0; 
+            this.twinkleSpeed = Math.random() * 0.02;
+        }
+        update(currentPhase) {
+            let targetAlpha = (currentPhase === 'day') ? 0 : this.baseAlpha;
+            if (this.alpha < targetAlpha) this.alpha += 0.005; 
+            else if (this.alpha > targetAlpha) this.alpha -= 0.005;
+
+            if (this.alpha > 0.1) {
+                this.alpha += this.twinkleSpeed;
+                if (this.alpha > this.baseAlpha + 0.2 || this.alpha < this.baseAlpha - 0.2) this.twinkleSpeed *= -1;
+            }
+        }
+        draw() {
+            if (this.alpha <= 0) return;
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    class Meteor {
+        constructor() { this.init(); }
+        init() {
+            this.x = Math.random() * cw * 1.2; 
+            this.y = -50; 
+            this.len = Math.random() * 80 + 20;
+            this.speed = Math.random() * 5 + 6;
+            this.active = false;
+        }
+        spawn() {
+            this.x = Math.random() * cw * 0.9;
+            this.y = -50;
+            this.active = true;
+        }
+        update() {
+            if (!this.active) return;
+            this.x -= this.speed;
+            this.y += this.speed;
+            if (this.y > ch + 100) this.active = false;
+        }
+        draw() {
+            if (!this.active) return;
+            let grad = ctx.createLinearGradient(this.x, this.y, this.x + this.len, this.y - this.len);
+            grad.addColorStop(0, 'rgba(255,255,255,0.8)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x + this.len, this.y - this.len); 
+            ctx.stroke();
+        }
+    }
+
+    // Init Stars & Meteors
+    for(let i=0; i<150; i++) stars.push(new Star());
+    for(let i=0; i<3; i++) meteors.push(new Meteor());
+
+    // ==========================================
+    // FIREWORK PHYSICS
+    // ==========================================
+    
+    // 1. Firework (ลูกพลุขาขึ้น)
+    function Firework(sx, sy, tx, ty, type = 'small') {
+        this.x = sx; this.y = sy;
+        this.sx = sx; this.sy = sy;
+        this.tx = tx; this.ty = ty;
+        this.distanceToTarget = calculateDistance(sx, sy, tx, ty);
+        this.distanceTraveled = 0;
+        
+        // Types: 'small', 'multi', 'hero', 'ring', 'willow', 'palm'
+        this.type = type; 
+        this.isBig = (type === 'multi' || type === 'hero' || type === 'willow' || type === 'palm');
+
+        this.coordinates = [];
+        this.coordinateCount = 3;
+        while (this.coordinateCount--) { this.coordinates.push([this.x, this.y]); }
+        
+        this.angle = Math.atan2(ty - sy, tx - sx);
+        this.speed = this.isBig ? 13 : random(2, 4); 
+        this.acceleration = this.isBig ? 1.0 : random(1.02, 1.06); 
+        this.brightness = random(50, 70);
+        
+        if (type === 'hero' || type === 'willow') this.hue = 45; // Gold
+        else this.hue = random(0, 360);
+    }
+
+    Firework.prototype.update = function(index) {
+        this.coordinates.pop();
+        this.coordinates.unshift([this.x, this.y]);
+        
+        if (!this.isBig) this.speed *= this.acceleration;
+        else this.speed *= 0.98; 
+        
+        var vx = Math.cos(this.angle) * this.speed;
+        var vy = Math.sin(this.angle) * this.speed;
+        
+        this.distanceTraveled = calculateDistance(this.sx, this.sy, this.x + vx, this.y + vy);
+        
+        let reached = false;
+        if (this.isBig) {
+             if (this.speed < 2 || this.y <= this.ty) reached = true;
+        } else {
+             if (this.distanceTraveled >= this.distanceToTarget) reached = true;
+        }
+
+        if (reached) {
+            createParticles(this.x, this.y, this.hue, this.type); 
+            fireworks.splice(index, 1);
+        } else {
+            this.x += vx;
+            this.y += vy;
+        }
+    }
+
+    Firework.prototype.draw = function() {
+        ctx.beginPath();
+        ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+        ctx.lineTo(this.x, this.y);
+        ctx.strokeStyle = 'hsl(' + this.hue + ', 100%, ' + this.brightness + '%)';
+        ctx.lineWidth = this.isBig ? 3 : 1;
+        ctx.stroke();
+    }
+
+    // 2. Particle (ลูกพลุขาลง/ระเบิด)
+    function Particle(x, y, hue, type) {
+        this.x = x; this.y = y;
+        this.coordinates = [];
+        this.coordinateCount = (type === 'hero' || type === 'multi' || type === 'secondary' || type === 'willow' || type === 'palm') ? 8 : 5; 
+        while (this.coordinateCount--) { this.coordinates.push([this.x, this.y]); }
+        
+        this.angle = random(0, Math.PI * 2); 
+        
+        // กำหนดความเร็ว (รัศมีระเบิด)
+        if (type === 'multi') this.speed = random(8, 15);
+        else if (type === 'hero') this.speed = random(8, 16); // ** ลดความแรงลงจากเดิม (10-22) ให้ดูไม่เละ **
+        else if (type === 'secondary') this.speed = random(3, 8);
+        else if (type === 'willow') this.speed = random(4, 10);
+        else if (type === 'palm') this.speed = random(8, 12); // ปาล์มพุ่งแรงระดับหนึ่ง
+        else this.speed = random(1, 8); // small, ring
+        
+        this.friction = 0.95; 
+        this.gravity = 0.8; 
+        
+        this.hue = random(hue - 20, hue + 20); 
+        this.brightness = random(50, 80);
+        this.alpha = 1;       
+        this.decay = random(0.015, 0.03); 
+        
+        this.type = type;
+        this.hasSecondary = (type === 'multi');
+
+        // ฟิสิกส์เฉพาะทาง
+        if (type === 'hero') {
+            this.gravity = 0.45; // ปรับให้หนักขึ้นนิดนึงจะได้ไม่ลอย
+            this.friction = 0.95; // หนืดขึ้นนิดนึงจะได้ไม่กระจายกว้างเกิน
+            this.decay = random(0.005, 0.015); 
+        } else if (type === 'multi') {
+            this.gravity = 0.6;
+            this.friction = 0.94; 
+            this.decay = random(0.02, 0.03); 
+        } else if (type === 'secondary') {
+             this.gravity = 0.3; 
+             this.decay = random(0.01, 0.02); 
+             this.friction = 0.96;
+        } else if (type === 'willow') {
+            this.gravity = 0.2; 
+            this.friction = 0.92; 
+            this.decay = random(0.005, 0.01); 
+        } else if (type === 'ring') {
+            this.gravity = 0.4;
+            this.friction = 0.96; 
+            this.decay = 0.02;
+        } else if (type === 'palm') {
+            // ** พลุปาล์ม/เส้น: มีแต่หาง เส้นหนา พุ่งแล้วย้อย **
+            this.gravity = 0.4; 
+            this.friction = 0.97; // พุ่งไปได้ไกล
+            this.decay = 0.015; // อยู่นาน
+        }
+    }
+
+    Particle.prototype.update = function(index) {
+        this.coordinates.pop();
+        this.coordinates.unshift([this.x, this.y]);
+        
+        this.speed *= this.friction; 
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed + this.gravity; 
+        
+        this.alpha -= this.decay;
+        
+        if (this.alpha <= this.decay) {
+            if (this.hasSecondary) {
+                createSecondaryBurst(this.x, this.y, this.hue);
+            }
+            particles.splice(index, 1);
+        }
+    }
+
+    Particle.prototype.draw = function() {
+        ctx.beginPath();
+        ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+        ctx.lineTo(this.x, this.y);
+        ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
+        
+        // ความหนาเส้น
+        if (this.type === 'hero') ctx.lineWidth = 2.5;
+        else if (this.type === 'multi') ctx.lineWidth = 2;
+        else if (this.type === 'willow') ctx.lineWidth = 2;
+        else if (this.type === 'palm') ctx.lineWidth = 3; // ** ปาล์มเส้นหนา **
+        else if (this.type === 'secondary') ctx.lineWidth = 1.5;
+        else ctx.lineWidth = 1;
+        
+        ctx.stroke();
+    }
+
+    function createParticles(x, y, hue, type) {
+        let particleCount = 80;
+        
+        if (type === 'hero') particleCount = 250; // ลดลงนิดหน่อยจาก 300 จะได้ไม่รก
+        if (type === 'multi') particleCount = 60; 
+        if (type === 'willow') particleCount = 100;
+        if (type === 'ring') particleCount = 50; 
+        if (type === 'palm') particleCount = 15; // ** ปาล์มน้อยๆ แต่เส้นชัดๆ **
+
+        // --- Logic สร้างพลุวงกลม 2 ชั้น (Double Ring) ---
+        if (type === 'ring') {
+            // วงนอก
+            for(let i=0; i<particleCount; i++) {
+                const p = new Particle(x, y, hue, type);
+                const a = (Math.PI * 2 * i) / particleCount;
+                p.angle = a; 
+                p.speed = 8; // ความเร็ววงนอก
+                particles.push(p);
+            }
+            // วงใน (แตกจากจุดเดิมพร้อมกัน แต่ช้ากว่า)
+            for(let i=0; i<particleCount; i++) {
+                const p = new Particle(x, y, hue, type);
+                const a = (Math.PI * 2 * i) / particleCount;
+                p.angle = a; 
+                p.speed = 5; // ความเร็ววงใน (สร้างความรู้สึกแตก 2 ครั้ง)
+                particles.push(p);
+            }
+        } 
+        
+        // --- Logic สร้างพลุ Palm (เส้นๆ) ---
+        else if (type === 'palm') {
+             for(let i=0; i<particleCount; i++) {
+                const p = new Particle(x, y, hue, type);
+                // พยายามให้ออกไปเป็นแฉกสวยๆ
+                particles.push(p);
+            }
+        }
+        
+        // --- Logic ทั่วไป ---
+        else {
+            while (particleCount--) {
+                particles.push(new Particle(x, y, hue, type));
+            }
+        }
+        
+        if (type === 'hero') {
+            const flash = document.createElement('div');
+            flash.style.position = 'fixed';
+            flash.style.top = 0; flash.style.left = 0;
+            flash.style.width = '100%'; flash.style.height = '100%';
+            flash.style.background = 'white';
+            flash.style.opacity = '0.3'; 
+            flash.style.pointerEvents = 'none';
+            flash.style.transition = 'opacity 0.2s';
+            document.body.appendChild(flash);
+            setTimeout(() => { flash.style.opacity = '0'; }, 50);
+            setTimeout(() => { flash.remove(); }, 300);
+        }
+    }
+
+    // ฟังก์ชันสร้างการระเบิดรอบสอง (ลูกย่อย)
+    function createSecondaryBurst(x, y, hue) {
+        let count = 10 + Math.floor(Math.random() * 8); 
+        while(count--) {
+            particles.push(new Particle(x, y, hue, 'secondary'));
+        }
+    }
+
+    // ==========================================
+    // ANIMATION LOOP
+    // ==========================================
+    function loop() {
+        requestAnimationFrame(loop);
+
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+        ctx.fillRect(0, 0, cw, ch);
+        
+        ctx.globalCompositeOperation = 'lighter';
+
+        const currentPhaseClass = document.body.className;
+        const phase = currentPhaseClass.includes('day') ? 'day' : (currentPhaseClass.includes('newyear') ? 'newyear' : 'night');
+        
+        stars.forEach(s => { s.update(phase); s.draw(); });
+        
+        if (phase !== 'day' && phase !== 'newyear') {
+             if (Math.random() < 0.01) {
+                const m = meteors.find(m => !m.active);
+                if (m) m.spawn();
+            }
+        }
+        meteors.forEach(m => { m.update(); m.draw(); });
+
+        var i = fireworks.length;
+        while (i--) { fireworks[i].draw(); fireworks[i].update(i); }
+        
+        var i = particles.length;
+        while (i--) { particles[i].draw(); particles[i].update(i); }
+
+        if (typeof isCelebrationStarted !== 'undefined' && isCelebrationStarted) {
+            
+            let elapsed = Date.now() - celebrationStartTime;
+
+            // *** Loop ควบคุมการยิงพลุ ***
+            if (timerTick >= timerTotal) {
+                
+                // === ช่วงเปิดงาน (Opening): 0 - 10 วินาที (Hero & Multi Only) ===
+                if (elapsed < 10000) { 
+                    if (Math.random() < 0.5) { 
+                         fireworks.push(new Firework(random(cw*0.2, cw*0.8), ch, random(cw*0.2, cw*0.8), random(ch*0.1, ch*0.4), 'hero'));
+                    } else { 
+                        fireworks.push(new Firework(random(cw*0.2, cw*0.8), ch, random(cw*0.2, cw*0.8), random(ch*0.1, ch*0.4), 'multi'));
+                    }
+                    timerTick = random(0, 8); 
+                } 
+                
+                // === ช่วงหลังเปิดงาน (After Opening) ===
+                else {
+                    const rand = Math.random();
+                    if (rand < 0.2) {
+                        // Double Ring
+                        fireworks.push(new Firework(random(cw*0.2, cw*0.8), ch, random(cw*0.2, cw*0.8), random(ch*0.1, ch*0.4), 'ring'));
+                    } else if (rand < 0.4) {
+                        // Palm (เส้น)
+                        fireworks.push(new Firework(random(cw*0.2, cw*0.8), ch, random(cw*0.2, cw*0.8), random(ch*0.1, ch*0.4), 'palm'));
+                    } else if (rand < 0.6) {
+                        // Willow (Gold)
+                        fireworks.push(new Firework(random(cw*0.2, cw*0.8), ch, random(cw*0.2, cw*0.8), random(ch*0.1, ch*0.4), 'willow'));
+                    } else {
+                        // Small standard
+                        fireworks.push(new Firework(random(0, cw), ch, random(0, cw), random(0, ch / 2), 'small'));
+                    }
+                    timerTick = random(0, 15); 
+                }
+            } else {
+                timerTick++;
+            }
+        }
+    }
+
+    loop();
+
+    window.addEventListener('resize', function(){
+        cw = window.innerWidth;
+        ch = window.innerHeight;
+        canvas.width = cw;
+        canvas.height = ch;
+    });
+
+    // ==========================================
+    // LOGIC เดิม
+    // ==========================================
+
+// ================================
+// REAL NEW YEAR TIME (Thailand)
+// ================================
+
+// เวลาเป้าหมาย: 1 มกราคม 2026 00:00:00 (เวลาไทย)
+const targetTime = new Date(
+    2026, // ปี
+    0,    // เดือน (มกราคม = 0)
+    1,    // วันที่
+    0,    // ชั่วโมง
+    0,    // นาที
+    0     // วินาที
+).getTime();
+
+let currentPhase = 'day';
+
+    const waitingWords = [
+        { text: "The Last Chapter", style: "style-mood" },
+        { text: "Memories Remain", style: "style-mood" },
+        { text: "Reflecting on 2025", style: "style-mood" },
+        { text: "Lessons Learned", style: "style-mood" },
+        { text: "Grateful Heart", style: "style-mood" },
+        { text: "Time Flies Fast", style: "style-mood" },
+        { text: "Hope Rises", style: "style-mood" },
+        { text: "Dreams Await", style: "style-mood" },
+        { text: "Embrace Change", style: "style-mood" },
+        { text: "A New Dawn Coming", style: "style-mood" },
+        { text: "Believe in Magic", style: "style-mood" },
+        { text: "Writing New Pages", style: "style-mood" },
+        { text: "Letting Go", style: "style-mood" },
+        { text: "Stay Strong", style: "style-mood" },
+        { text: "Almost There", style: "style-mood" }
+    ];
+
+    const finalCountdownWords = [
+        { text: "Night Falls", style: "style-mood" },
+        { text: "The Moment is Near", style: "style-mood" },
+        { text: "Silence", style: "style-mood" },
+        { text: "Ready for 2026", style: "style-mood" }
+    ];
+    
+    const peakWord = { text: "2026", style: "style-hero" };
+    
+    const dawnWords = [
+        { text: "Happy New Year", style: "style-mood" },
+        { text: "New Journey", style: "style-mood" }
+    ];
+
+    let wordIndex = 0;
+    const textContainer = document.getElementById('textContainer');
+    let currentWordSet = waitingWords; 
+
+    function getNextWord() {
+        if (!currentWordSet || currentWordSet.length === 0) return null;
+        if (currentWordSet === waitingWords) {
+             const randIndex = Math.floor(Math.random() * currentWordSet.length);
+             return currentWordSet[randIndex];
+        }
+        if (wordIndex >= currentWordSet.length) wordIndex = 0;
+        return currentWordSet[wordIndex];
+    }
+
+    function rotateText() {
+        const wordData = getNextWord();
+        if (!wordData) return;
+        
+        const el = document.createElement('div');
+        el.className = `text-item ${wordData.style}`;
+        el.textContent = wordData.text;
+        textContainer.appendChild(el);
+
+        void el.offsetWidth;
+        
+        requestAnimationFrame(() => el.classList.add('active'));
+
+        let stayDuration = 2500; 
+        
+        if (currentPhase === 'newyear' && wordData.text === "2026") stayDuration = 8000;
+
+        setTimeout(() => {
+            el.classList.remove('active');
+            el.classList.add('exit');
+
+            setTimeout(() => {
+                if(el.parentNode) el.parentNode.removeChild(el);
+                
+                if (!(currentPhase === 'newyear' && wordData.text === "2026")) { 
+                    if (currentWordSet !== waitingWords) wordIndex++; 
+                    rotateText(); 
+                }
+            }, 3100); 
+
+        }, 3000 + stayDuration); 
+    }
+    
+    setTimeout(rotateText, 500);
+
+    const countdownBox = document.getElementById('countdownBox');
+    const valD = document.getElementById('val-d');
+    const valH = document.getElementById('val-h');
+    const valM = document.getElementById('val-m');
+    const valS = document.getElementById('val-s');
+
+    function updateSystem() {
+        requestAnimationFrame(updateSystem);
+
+        let now = new Date().getTime();
+        let distance = targetTime - now;
+
+        let nextPhase = currentPhase;
+        
+        if (distance <= 0) {
+            nextPhase = 'newyear';
+        } else if (distance <= 18000) { 
+            nextPhase = 'night';
+        } else {
+            nextPhase = 'day';
+        }
+
+        if (nextPhase !== currentPhase) {
+            currentPhase = nextPhase;
+            document.body.className = `phase-${currentPhase}`;
+            
+            if (currentPhase === 'night') {
+                currentWordSet = finalCountdownWords;
+                wordIndex = 0;
+            } else if (currentPhase === 'newyear') {
+                triggerNewYearSequence();
+            } else {
+                currentWordSet = waitingWords;
+            }
+        }
+
+        if (distance > 0) {
+            let days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            let hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            let minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            let seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            valD.innerText = String(days).padStart(2, '0');
+            valH.innerText = String(hours).padStart(2, '0');
+            valM.innerText = String(minutes).padStart(2, '0');
+            valS.innerText = String(seconds).padStart(2, '0');
+        } else {
+            valS.innerText = "00";
+        }
+    }
+
+    function triggerNewYearSequence() {
+        countdownBox.classList.add('hidden');
+        currentWordSet = []; 
+
+        isCelebrationStarted = true; 
+        celebrationStartTime = Date.now(); // เริ่มจับเวลาสำหรับคิวพลุ
+
+        // ** ยิงพลุเปิดงานชุดใหญ่ไฟกระพริบ (3 ลูกพร้อมกัน) **
+        fireworks.push(new Firework(cw*0.5, ch, cw*0.5, ch*0.2, 'hero'));
+        fireworks.push(new Firework(cw*0.3, ch, cw*0.3, ch*0.3, 'hero'));
+        fireworks.push(new Firework(cw*0.7, ch, cw*0.7, ch*0.3, 'hero'));
+
+        setTimeout(() => {
+            currentWordSet = [peakWord];
+            wordIndex = 0;
+            rotateText();
+        }, 1000);
+
+        setTimeout(() => {
+            currentWordSet = dawnWords;
+            wordIndex = 0;
+            rotateText();
+        }, 15000); 
+        
+    }
+    // ================================
+// REAL TIME CLOCK UPDATE
+// ================================
+const realTimeClock = document.getElementById('realTimeClock');
+
+    function updateRealTimeClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+
+        realTimeClock.textContent = `${h}:${m}:${s}`;
+    }
+
+    setInterval(updateRealTimeClock, 1000);
+    updateRealTimeClock();
+
+
+    updateSystem();
+
+})();
+</script>
+</body>
+</html>
