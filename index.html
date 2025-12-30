@@ -440,9 +440,9 @@ let celebrationStartTime = 0; // จับเวลาเริ่มงาน
         
         let reached = false;
         if (this.isBig) {
-             if (this.speed < 2 || this.y <= this.ty) reached = true;
+            if (this.speed < 2 || this.y <= this.ty) reached = true;
         } else {
-             if (this.distanceTraveled >= this.distanceToTarget) reached = true;
+            if (this.distanceTraveled >= this.distanceToTarget) reached = true;
         }
 
         if (reached) {
@@ -722,6 +722,26 @@ const targetTime = new Date(
     0     // วินาที
 ).getTime();
 
+function getPhaseByRealTime(distance) {
+    const now = new Date();
+    const hour = now.getHours();
+    const month = now.getMonth();
+    const date = now.getDate();
+
+    // 🎆 ปีใหม่
+    if (distance <= 0 || (month === 0 && date === 1)) {
+        return 'newyear';
+    }
+
+    // 🌙 กลางคืน
+    if (hour >= 18 || hour < 6) {
+        return 'night';
+    }
+
+    // 🌞 กลางวัน
+    return 'day';
+}
+
 let currentPhase = 'day';
 
     const waitingWords = [
@@ -816,16 +836,7 @@ let currentPhase = 'day';
 
         let now = new Date().getTime();
         let distance = targetTime - now;
-
-        let nextPhase = currentPhase;
-        
-        if (distance <= 0) {
-            nextPhase = 'newyear';
-        } else if (distance <= 18000) { 
-            nextPhase = 'night';
-        } else {
-            nextPhase = 'day';
-        }
+        let nextPhase = getPhaseByRealTime(distance);
 
         if (nextPhase !== currentPhase) {
             currentPhase = nextPhase;
